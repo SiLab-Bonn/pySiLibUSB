@@ -12,7 +12,8 @@ import usb.core
 import usb.util
 import array
 #import thread
-import threading
+from threading import RLock
+#from multiprocessing import RLock
 import struct
 import time
 import os
@@ -28,10 +29,10 @@ class SiUSBDevice(object):
     SUR_DATA_FASTOUT_PIPE =  0x02 #0x02 write EP2 
     SUR_DATA_FASTIN_PIPE  =  0x86 #0x86 read EP6 
     
-    SUR_EP1_RD = {'address': 0x81, 'maxTransferSize': 0xffff, 'maxPocketSize': 64}
-    SUR_EP1_WR = {'address': 0x01, 'maxTransferSize': 0x8fff, 'maxPocketSize': 64} #why? 0x8fff exactly 0xa0ff?
-    SUR_EP2_WR = {'address': 0x02, 'maxTransferSize': 2**21, 'maxPocketSize': 2**21}
-    SUR_EP6_RD = {'address': 0x86, 'maxTransferSize': 2**21, 'maxPocketSize': 2**21}
+    SUR_EP1_RD = {'address': 0x81, 'maxTransferSize': 0xffff, 'maxPacketSize': 64}
+    SUR_EP1_WR = {'address': 0x01, 'maxTransferSize': 0x8fff, 'maxPacketSize': 64} #why? 0x8fff exactly 0xa0ff?
+    SUR_EP2_WR = {'address': 0x02, 'maxTransferSize': 2**21, 'maxPacketSize': 2**21}
+    SUR_EP6_RD = {'address': 0x86, 'maxTransferSize': 2**21, 'maxPacketSize': 2**21}
     
     
     SUR_TYPE_LOOP       = {'id': 0, 'ep_read' : SUR_EP1_RD, 'ep_write' : SUR_EP1_WR}
@@ -73,7 +74,7 @@ class SiUSBDevice(object):
     xp_done = XP_DONE_FX;
     
     
-    def __init__(self, device = None):
+    def __init__(self, device = None, identifier = None):
     
         #import usb.backend.libusb0 as libusb0
         #backend_usb0 = libusb0.get_backend()
@@ -95,9 +96,14 @@ class SiUSBDevice(object):
             else:
                 raise ValueError('Device has wrong type')
         
-        self.dev.set_configuration() # compatibility to SILAB driver
+        self.dev.set_configuration()
         
-        self.lock = threading.RLock()
+        self.lock = RLock()
+        
+        if identifier == None:
+            self.identifier = self.GetBoardId()
+        else:
+            self.identifier = identifier
         
     def WriteExternal(self, address, data):
         self._write( self.SUR_TYPE_EXTERNAL, address, data)
@@ -133,7 +139,7 @@ class SiUSBDevice(object):
             chunks = lambda l, n: [l[x: x+n] for x in xrange(0, len(l), n)]
             new_addr = addr
             for req in chunks( buff.tolist(), stype['ep_write']['maxTransferSize'] ) :
-                self._write_single(stype, addr, array.array('B', req)) #BUG: addr should be  new_addr but it does not work
+                self._write_single(stype, addr, array.array('B', req)) #BUG: addr should be new_addr but it does not work
                 new_addr = new_addr + len(req)
         else:
             self._write_single(stype, addr, buff)
@@ -143,11 +149,11 @@ class SiUSBDevice(object):
     def _write_single(self, stype, addr, data):
         size = data.buffer_info()[1]
         
-        if size > stype['ep_write']['maxPocketSize'] :
+        if size > stype['ep_write']['maxPacketSize'] :
             self._write_sur(stype, self.SUR_DIR_OUT, addr, size)
             i = 0;
             chunks = lambda l, n: [l[x: x+n] for x in xrange(0, len(l), n)]
-            for req in chunks( data, stype['ep_write']['maxPocketSize'] ) :
+            for req in chunks( data, stype['ep_write']['maxPacketSize'] ) :
                 self.dev.write(stype['ep_write']['address'] , req.tostring())
                 i += 1
         
@@ -185,14 +191,14 @@ class SiUSBDevice(object):
 
         ret = array.array('B')
         
-        if size > stype['ep_read']['maxPocketSize'] :
-            new_size = stype['ep_read']['maxPocketSize']
+        if size > stype['ep_read']['maxPacketSize'] :
+            new_size = stype['ep_read']['maxPacketSize']
             
             while new_size < size:
-                ret += self.dev.read(stype['ep_read']['address'], stype['ep_read']['maxPocketSize'])
-                new_size = new_size + stype['ep_read']['maxPocketSize']
+                ret += self.dev.read(stype['ep_read']['address'], stype['ep_read']['maxPacketSize'])
+                new_size = new_size + stype['ep_read']['maxPacketSize']
             
-            ret += self.dev.read(stype['ep_read']['address'], size+stype['ep_read']['maxPocketSize']-new_size)
+            ret += self.dev.read(stype['ep_read']['address'], size+stype['ep_read']['maxPacketSize']-new_size)
             
         else:
             ret += self.dev.read(stype['ep_read']['address'], size)
@@ -221,7 +227,8 @@ class SiUSBDevice(object):
     
     def GetBoardId(self):
         ret = self.ReadEEPROM(self.EEPROM_ID_ADDR, self.EEPROM_ID_SIZE)
-        return ret[1:1+ret[0]].tostring()
+        #return ret[1:1+ret[0]].tostring()
+        return ret[1:-1].tostring()
 
     def SetBoardId(self, board_id):
         raise NotImplementedError('EEPROM address broken')
@@ -246,7 +253,7 @@ class SiUSBDevice(object):
         return letter,f.read(alen)
     
     def _read_bit_file( self, bit_file_name ):
-        print bit_file_name
+        #print bit_file_name
         with open(bit_file_name, "rb") as f:
             head13  = array.array('B', f.read(13) ); 
             if head13.tolist() != [0, 9, 15, 240, 15, 240, 15, 240, 15, 240, 0, 0, 1]:
@@ -383,6 +390,12 @@ def GetUSBBoards():
     boards = [SiUSBDevice( device = dev ) for dev in devs]
     return boards
 
+def GetUSBDevices():
+    devs = usb.core.find( find_all=True, idVendor=0x5312, idProduct=0x0200)
+    if devs is None:
+        return None
+    
+    return devs
 
 if __name__ == "__main__":
     boards = GetUSBBoards()
