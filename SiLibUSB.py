@@ -1,4 +1,13 @@
-
+#-------------------------------------------------------------------------
+#    Title   : pySiLibUSB
+#    Company : SILAB, Phys. Inst Bonn
+#    Authors : Tomasz Hemperek <hemperek@uni-bonn.de>, Jens Janssen <janssen@physik.uni-bonn.de>
+#--------------------------------------------------------------------------------------
+#    License : You are free to use this source files for your own development as long
+#    as it stays in a public research context. You are not allowed to use it
+#    for commercial purpose. You must put this header with 
+#    authors names in all development based on this library.
+#--------------------------------------------------------------------------------------
 
 r"""SiLibUSB - SILAB USB Device Application Programming Interface
 
