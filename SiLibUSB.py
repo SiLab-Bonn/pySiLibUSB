@@ -1,5 +1,5 @@
 #-------------------------------------------------------------------------
-#    Title   : pySiLibUSB
+#    Title   : pySiLibUSB based on C++ SiLibUsb by HK
 #    Company : SILAB, Phys. Inst Bonn
 #    Authors : Tomasz Hemperek <hemperek@uni-bonn.de>, Jens Janssen <janssen@physik.uni-bonn.de>
 #--------------------------------------------------------------------------------------
