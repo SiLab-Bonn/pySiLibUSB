@@ -13,9 +13,18 @@ r"""SiLibUSB - SILAB USB Device Application Programming Interface
 
 Based on PyUsb [http://sourceforge.net/apps/trac/pyusb/]
 
+HISTORY:
+0.1:
+- initial release
+0.1.1:
+- added version attribute to module
+
 TODO:
-- add exeption on missuse
+- add exception on misuse
 """
+
+__version__ = '0.1.1'
+__version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 import usb.core
 import usb.util
