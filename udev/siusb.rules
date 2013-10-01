@@ -1,0 +1,1 @@
+ACTION=="add", KERNEL=="*", BUS=="usb", SYSFS{idVendor}=="5312", MODE="0666"
