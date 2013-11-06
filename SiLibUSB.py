@@ -18,12 +18,19 @@ HISTORY:
 - initial release
 0.1.1:
 - added version attribute to module
-
+0.1.2:
+- changed __init__
+- added board_id, board_name and fw_version property, removed self.identifier
+- added factory function from_board_id()
+- added dispose() method
+- removed GetBoardId() from __init__, since it leads to resource errors (when already in use)
+- detach kernel driver if necessary (POSIX only)
+ 
 TODO:
 - add exception on misuse
 """
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 import usb.core
@@ -36,7 +43,6 @@ import struct
 import time
 import os
 #import sys
-
 
 class SiUSBDevice(object):
     
@@ -92,37 +98,63 @@ class SiUSBDevice(object):
     xp_done = XP_DONE_FX;
     
     
-    def __init__(self, device = None, identifier = None):
+    def __init__(self, device = None):
     
         #import usb.backend.libusb0 as libusb0
         #backend_usb0 = libusb0.get_backend()
         #self.dev = usb.core.find( find_all=False, backend = backend_usb0, idVendor=0x5312, idProduct=0x0200)
         
         # compatible usb devices
-        vendor_id = 0x5312
-        product_id = 0x0200
+        self.vendor_id = 0x5312
+        self.product_id = 0x0200
         
         if device is None:
-            self.dev = usb.core.find(idVendor = vendor_id, idProduct = product_id)
+            self.dev = usb.core.find(idVendor = self.vendor_id, idProduct = self.product_id)
             if self.dev is None:
                 raise ValueError('No device found')
         else:
             if isinstance(device, usb.core.Device):
                 self.dev = device
-                if self.dev.idVendor != vendor_id or self.dev.idProduct != product_id:
+                if self.dev.idVendor != self.vendor_id or self.dev.idProduct != self.product_id:
                     raise ValueError('Device has wrong vendor/product ID')
             else:
                 raise ValueError('Device has wrong type')
+        
+        if os.name == 'posix' and self.dev.is_kernel_driver_active(0) is True:
+            # detach kernel driver
+            self.dev.detach_kernel_driver(0)
         
         self.dev.set_configuration()
         
         self.lock = RLock()
         
-        if identifier == None:
-            self.identifier = self.GetBoardId()
-        else:
-            self.identifier = identifier
+    @classmethod
+    def from_board_id(cls, board_id):
+        devs = usb.core.find(find_all=True, idVendor = cls.vendor_id, idProduct = cls.product_id)
+        if devs is None:
+            raise ValueError('No device found')
         
+        boards = [cls(device = dev) for dev in devs]
+        board_with_id = [board for board in boards if board.board_id==str(board_id)] # TODO: catch USBError, if in use
+        if not board_with_id:
+            raise ValueError('No device found with board ID %s' % str(board_id))
+        elif len(board_with_id)>1:
+            raise ValueError('Found two or more devices with board ID %s' % str(board_id))
+        else:
+            return board_with_id[0]
+    
+    @property
+    def board_id(self):
+        return self.GetBoardId()
+    
+    @property
+    def board_name(self):
+        return self.GetName()
+    
+    @property
+    def fw_version(self):
+        return self.GetFWVersion()
+    
     def WriteExternal(self, address, data):
         self._write( self.SUR_TYPE_EXTERNAL, address, data)
     
@@ -394,6 +426,22 @@ class SiUSBDevice(object):
         ret = self._Read8051(self.IOA_FX, 1)[0]
         ret &= 1
         return bool(ret)
+    
+    def dispose(self):
+        '''Release internal resources allocated by the object.
+    
+        Sometimes you need to provide deterministic resources
+        freeing, for example to allow another application to
+        talk to the device. As Python does not provide deterministic
+        destruction, this function releases all internal resources
+        allocated by the device, like device handle and interface
+        policy.
+    
+        After calling this function, you can continue using the device
+        object normally. If the resources will be necessary again, it
+        will allocate them automatically.
+        '''
+        usb.util.dispose_resources(self.dev)
         
     def __del__(self):
         if os.name == 'posix':
