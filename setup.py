@@ -9,7 +9,7 @@ setup(
     version=__version__,
     py_modules=['SiLibUSB'],
     description='SILAB USB Device Application Programming Interface',
-    url='http://icwiki.physik.uni-bonn.de/',
+    url='https://silab-redmine.physik.uni-bonn.de/projects/pysilibusb',
     long_description =''
 )
 
