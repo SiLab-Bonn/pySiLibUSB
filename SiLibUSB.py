@@ -28,6 +28,8 @@ HISTORY:
 0.1.3:
 - code cleanup
 - added XilinxAlreadyLoaded()
+0.1.4:
+- fix from_board_id() method
 
 TODO:
 - add exception on misuse
@@ -99,15 +101,15 @@ class SiUSBDevice(object):
     xp_prog = XP_PROG_FX
     xp_done = XP_DONE_FX
 
+    # compatible usb devices
+    vendor_id = 0x5312
+    product_id = 0x0200
+
     def __init__(self, device=None):
 
         # import usb.backend.libusb0 as libusb0
         # backend_usb0 = libusb0.get_backend()
         # self.dev = usb.core.find( find_all=False, backend = backend_usb0, idVendor=0x5312, idProduct=0x0200)
-
-        # compatible usb devices
-        self.vendor_id = 0x5312
-        self.product_id = 0x0200
 
         if device is None:
             self.dev = usb.core.find(idVendor=self.vendor_id, idProduct=self.product_id)
@@ -135,14 +137,21 @@ class SiUSBDevice(object):
         if devs is None:
             raise ValueError('No device found')
 
-        boards = [cls(device=dev) for dev in devs]
-        board_with_id = [board for board in boards if board.board_id == str(board_id)]  # TODO: catch USBError, if in use
-        if not board_with_id:
+        boards = []
+        for dev in devs:
+            board = cls(device=dev)
+            try:
+                if board.board_id == str(board_id):
+                    boards.append(board)
+            except usb.core.USBError:
+                pass
+            board.dispose()
+        if not boards:
             raise ValueError('No device found with board ID %s' % str(board_id))
-        elif len(board_with_id) > 1:
-            raise ValueError('Found two or more devices with board ID %s' % str(board_id))
+        elif len(boards) > 1:
+            raise ValueError('Found %d devices with board ID %s' % (len(boards), str(board_id)))
         else:
-            return board_with_id[0]
+            return boards[0]
 
     @property
     def board_id(self):
@@ -350,7 +359,7 @@ class SiUSBDevice(object):
 
         extension = os.path.splitext(filename)[1]
         if extension == '.bin':
-            with open(filename , "rb") as f:
+            with open(filename, "rb") as f:
                 fsize = os.path.getsize(filename)
                 bitstream.fromfile(f, fsize)
         elif extension == '.bit':
