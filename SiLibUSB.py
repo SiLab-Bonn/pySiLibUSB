@@ -30,12 +30,14 @@ HISTORY:
 - added XilinxAlreadyLoaded()
 0.1.4:
 - fix from_board_id() method
+0.1.5:
+- fix non-numerical characters
 
 TODO:
 - add exception on misuse
 """
 
-__version__ = '0.1.4'
+__version__ = '0.1.5'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 import usb.core
@@ -141,7 +143,8 @@ class SiUSBDevice(object):
         for dev in devs:
             board = cls(device=dev)
             try:
-                if board.board_id == str(board_id):
+                curr_board_id = board.board_id
+                if filter(type(curr_board_id).isdigit, curr_board_id) == str(board_id):
                     boards.append(board)
             except usb.core.USBError:
                 pass
