@@ -32,12 +32,13 @@ HISTORY:
 - fix from_board_id() method
 0.1.5:
 - fix non-numerical characters
-
+0.1.6:
+- fix detaching kernel driver only in Linux (not supported in OSX)
 TODO:
 - add exception on misuse
 """
 
-__version__ = '0.1.5'
+__version__ = '0.1.6'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 import usb.core
@@ -49,6 +50,7 @@ from threading import RLock
 import struct
 import time
 import os
+import platform
 # import sys
 
 
@@ -125,7 +127,7 @@ class SiUSBDevice(object):
             else:
                 raise ValueError('Device has wrong type')
 
-        if os.name == 'posix' and self.dev.is_kernel_driver_active(0) is True:
+        if platform.system() == 'Linux' and self.dev.is_kernel_driver_active(0) is True:
             # detach kernel driver
             self.dev.detach_kernel_driver(0)
 
