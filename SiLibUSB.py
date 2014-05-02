@@ -34,11 +34,13 @@ HISTORY:
 - fix non-numerical characters
 0.1.6:
 - fix detaching kernel driver only in Linux (not supported in OSX)
+0.1.7:
+- added __repr__
 TODO:
 - add exception on misuse
 """
 
-__version__ = '0.1.6'
+__version__ = '0.1.7'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 import usb.core
@@ -134,6 +136,9 @@ class SiUSBDevice(object):
         self.dev.set_configuration()
 
         self.lock = RLock()
+
+    def __repr__(self):
+        return '%s' % filter(type(self.board_id).isdigit, self.board_id)
 
     @classmethod
     def from_board_id(cls, board_id):
