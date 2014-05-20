@@ -36,12 +36,21 @@ HISTORY:
 - fix detaching kernel driver only in Linux (not supported in OSX)
 0.1.7:
 - added __repr__
+0.2.0:
+- buffering board ID and name to avoid freezing of some USBpix card under Windows operating system
+  (reading EEPROM twice and programming the FPGA firmware will freeze the board)
+- added more functionality to read out Xilinx configuration byte
 TODO:
 - add exception on misuse
 """
 
-__version__ = '0.1.7'
+__version__ = '0.2.0'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
+
+# set debugging options for pyUSB
+#import os
+#os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
+#os.environ['PYUSB_DEBUG'] = 'debug'
 
 import usb.core
 import usb.util
@@ -95,6 +104,7 @@ class SiUSBDevice(object):
     IOA_FX = 0x80
     OEA_FX = 0xB2
 
+    # Xilinx configuration
     XP_CS1_FX = 0x10  # port A, bit 4
     XP_RDWR_FX = 0x08  # port A, bit 3
     XP_BUSY_FX = 0x04  # port A, bit 2
@@ -110,6 +120,10 @@ class SiUSBDevice(object):
     # compatible usb devices
     vendor_id = 0x5312
     product_id = 0x0200
+    
+    # device specific
+    _board_id = None
+    _board_name = None
 
     def __init__(self, device=None):
 
@@ -203,7 +217,6 @@ class SiUSBDevice(object):
         self.lock.acquire()
 
         buff = array.array('B', data)
-
         size = buff.buffer_info()[1]
 
         if size > stype['ep_write']['maxTransferSize']:
@@ -219,7 +232,6 @@ class SiUSBDevice(object):
 
     def _write_single(self, stype, addr, data):
         size = data.buffer_info()[1]
-
         if size > stype['ep_write']['maxPacketSize']:
             self._write_sur(stype, self.SUR_DIR_OUT, addr, size)
             i = 0
@@ -227,7 +239,6 @@ class SiUSBDevice(object):
             for req in chunks(data, stype['ep_write']['maxPacketSize']):
                 self.dev.write(stype['ep_write']['address'], req.tostring())
                 i += 1
-
         else:
             self._write_sur(stype, self.SUR_DIR_OUT, addr, size)
             self.dev.write(stype['ep_write']['address'], data.tostring())
@@ -239,7 +250,6 @@ class SiUSBDevice(object):
         if size > stype['ep_read']['maxTransferSize']:
             new_addr = addr
             new_size = stype['ep_read']['maxTransferSize']
-
             while new_size < size:
                 ret += self._read_single(stype, new_addr, stype['ep_read']['maxTransferSize'])
                 new_addr = addr + new_size
@@ -263,13 +273,11 @@ class SiUSBDevice(object):
 
         if size > stype['ep_read']['maxPacketSize']:
             new_size = stype['ep_read']['maxPacketSize']
-
             while new_size < size:
                 ret += self.dev.read(stype['ep_read']['address'], stype['ep_read']['maxPacketSize'])
                 new_size = new_size + stype['ep_read']['maxPacketSize']
 
             ret += self.dev.read(stype['ep_read']['address'], size + stype['ep_read']['maxPacketSize'] - new_size)
-
         else:
             ret += self.dev.read(stype['ep_read']['address'], size)
 
@@ -288,19 +296,27 @@ class SiUSBDevice(object):
         return ret.tostring()
 
     def GetName(self):
-        ret = self.ReadEEPROM(self.EEPROM_NAME_ADDR, self.EEPROM_NAME_SIZE)
-        return ret[1:1 + ret[0]].tostring()
+        if not self._board_name:
+            ret = self.ReadEEPROM(self.EEPROM_NAME_ADDR, self.EEPROM_NAME_SIZE)
+            self._board_name = ret[1:1 + ret[0]].tostring()
+            return self._board_name
+        else:
+            return self._board_name
 
     def SetName(self, name):
-        raise NotImplementedError('EEPROM address broken')
+        raise NotImplementedError()
 
     def GetBoardId(self):
-        ret = self.ReadEEPROM(self.EEPROM_ID_ADDR, self.EEPROM_ID_SIZE)
-        # return ret[1:1+ret[0]].tostring()
-        return ret[1:-1].tostring()
+        if not self._board_id:
+            ret = self.ReadEEPROM(self.EEPROM_ID_ADDR, self.EEPROM_ID_SIZE)
+            # return ret[1:1+ret[0]].tostring()
+            self._board_id = ret[1:-1].tostring()
+            return self._board_id
+        else:
+            return self._board_id
 
     def SetBoardId(self, board_id):
-        raise NotImplementedError('EEPROM address broken')
+        raise NotImplementedError()
 
     def _get_end_point(self, pipe):
         cfg = self.dev.get_active_configuration()
@@ -355,6 +371,23 @@ class SiUSBDevice(object):
 
             ret["Bitstream"] = bitstream_swap
             return ret
+        
+    def InitXilinxConfPort(self):
+        portreg = self._Read8051(self.PORTACFG_FX, 1)[0]
+        portreg &= ~self.xp_rdwr
+        portreg &= ~self.xp_busy
+        portreg &= ~self.xp_prog
+        portreg &= ~self.xp_done
+        portreg &= ~self.xp_cs1
+        self._Write8051(self.PORTACFG_FX, [portreg])
+
+        portreg = self._Read8051(self.OEA_FX, 1)[0]
+        portreg |= self.xp_rdwr  # /* write,  OE = 1 */
+        portreg &= ~self.xp_busy  # /* read,  OE = 0 */
+        portreg |= self.xp_prog  # /* write, OE = 1 */
+        portreg &= ~self.xp_done  # /* read,  OE = 0 */
+        portreg |= self.xp_cs1  # /* write, OE = 1 */
+        self._Write8051(self.OEA_FX, [portreg])
 
     def DownloadXilinx(self, filename):
         r"""Configure FPGA.
@@ -377,22 +410,7 @@ class SiUSBDevice(object):
         else:
             raise ValueError('Wrong File Extension')
 
-        portreg = self._Read8051(self.PORTACFG_FX, 1)[0]
-
-        portreg &= ~self.xp_rdwr
-        portreg &= ~self.xp_busy
-        portreg &= ~self.xp_prog
-        portreg &= ~self.xp_done
-        portreg &= ~self.xp_cs1
-        self._Write8051(self.PORTACFG_FX, [portreg])
-
-        portreg = self._Read8051(self.OEA_FX, 1)[0]
-        portreg |= self.xp_rdwr  # /* write,  OE = 1 */
-        portreg &= ~self.xp_busy  # /* read,  OE = 0 */
-        portreg |= self.xp_prog  # /* write, OE = 1 */
-        portreg &= ~self.xp_done  # /* read,  OE = 0 */
-        portreg |= self.xp_cs1  # /* write, OE = 1 */
-        self._Write8051(self.OEA_FX, [portreg])
+        self.InitXilinxConfPort()
 
         conf_reg = 0
 
@@ -400,28 +418,32 @@ class SiUSBDevice(object):
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
-        self._Write8051(self.IOA_FX, [conf_reg])
+        self.SetXilinxConfByte((conf_reg,))
 
         # /* prog_b = 0 assert for at least 500ns */
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg &= ~self.xp_prog  # // prog_b = 0
-        self._Write8051(self.IOA_FX, [conf_reg])
+        self.SetXilinxConfByte((conf_reg,))
 
         # /* prog_b = 1 */
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
-        self._Write8051(self.IOA_FX, [conf_reg])
+        self.SetXilinxConfByte((conf_reg,))
 
         # /* cs_b = 0 */
         conf_reg &= ~self.xp_cs1  # // cs_b = 0
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
-        self._Write8051(self.IOA_FX, [conf_reg])
+        self.SetXilinxConfByte((conf_reg,))
 
-        self._write(self.SUR_TYPE_XILINX, 0, bitstream)
-        self._write(self.SUR_TYPE_XILINX, 0, [0, 0, 0, 0, 0, 0, 0, 0])
+        print 'writing bit stream'
+        print type(bitstream)
+        print bitstream[:32]
+        self._write(self.SUR_TYPE_XILINX, 0, bitstream[0:])
+
+        self._write(self.SUR_TYPE_XILINX, 0, (0, 0, 0, 0, 0, 0, 0, 0))  # eight extra clock to enable start-up
 
         time.sleep(0.1)
 
@@ -429,20 +451,37 @@ class SiUSBDevice(object):
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
-        self._Write8051(self.IOA_FX, [conf_reg])
+        self.SetXilinxConfByte((conf_reg,))
 
         # // write_b = 1 (default condition)
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg |= self.xp_rdwr  # // write_b = 1
         conf_reg |= self.xp_prog  # // prog_b = 1
-        self._Write8051(self.IOA_FX, [conf_reg])
+        self.SetXilinxConfByte((conf_reg,))
 
-        return self.XilinxAlreadyLoaded()
+        return self.GetXilinxConfPin(self.xp_done)
+
+    def SetXilinxConfByte(self, reg):
+        self._Write8051(self.IOA_FX, reg)
+
+    def GetXilinxConfByte(self):
+        return self._Read8051(self.IOA_FX, 1)[0]
+
+    def SetXilinxConfPin(self, pin, value):
+        reg = self.GetXilinxConfByte()
+        if value:
+            reg |= pin
+        else:
+            reg &= ~pin
+        self.SetXilinxConfByte((reg,))
+    
+    def GetXilinxConfPin(self, pin):
+        reg = self.GetXilinxConfByte()
+        return bool(reg & pin)
 
     def XilinxAlreadyLoaded(self):
-        ret = self._Read8051(self.IOA_FX, 1)[0]
-        ret &= 1
-        return bool(ret)
+        self.InitXilinxConfPort()
+        return self.GetXilinxConfPin(self.xp_done)
 
     def dispose(self):
         '''Release internal resources allocated by the object.
@@ -470,7 +509,6 @@ def GetUSBBoards():
     devs = usb.core.find(find_all=True, idVendor=0x5312, idProduct=0x0200)
     if devs is None:
         return None
-
     boards = [SiUSBDevice(device=dev) for dev in devs]
     return boards
 
@@ -479,7 +517,6 @@ def GetUSBDevices():
     devs = usb.core.find(find_all=True, idVendor=0x5312, idProduct=0x0200)
     if devs is None:
         return None
-
     return devs
 
 
