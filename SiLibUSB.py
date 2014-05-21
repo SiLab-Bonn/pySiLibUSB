@@ -438,9 +438,6 @@ class SiUSBDevice(object):
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
 
-        print 'writing bit stream'
-        print type(bitstream)
-        print bitstream[:32]
         self._write(self.SUR_TYPE_XILINX, 0, bitstream[0:])
 
         self._write(self.SUR_TYPE_XILINX, 0, (0, 0, 0, 0, 0, 0, 0, 0))  # eight extra clock to enable start-up
