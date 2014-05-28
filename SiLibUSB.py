@@ -40,11 +40,13 @@ HISTORY:
 - buffering board ID and name to avoid freezing of some USBpix card under Windows operating system
   (reading EEPROM twice and programming the FPGA firmware will freeze the board)
 - added more functionality to read out Xilinx configuration byte
+0.2.1:
+- reverting changes concerning reading EEPROM (fix is done in FPGA firmware)
 TODO:
 - add exception on misuse
 """
 
-__version__ = '0.2.0'
+__version__ = '0.2.1'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -120,10 +122,6 @@ class SiUSBDevice(object):
     # compatible usb devices
     vendor_id = 0x5312
     product_id = 0x0200
-    
-    # device specific
-    _board_id = None
-    _board_name = None
 
     def __init__(self, device=None):
 
@@ -296,24 +294,16 @@ class SiUSBDevice(object):
         return ret.tostring()
 
     def GetName(self):
-        if not self._board_name:
-            ret = self.ReadEEPROM(self.EEPROM_NAME_ADDR, self.EEPROM_NAME_SIZE)
-            self._board_name = ret[1:1 + ret[0]].tostring()
-            return self._board_name
-        else:
-            return self._board_name
+        ret = self.ReadEEPROM(self.EEPROM_NAME_ADDR, self.EEPROM_NAME_SIZE)
+        return ret[1:1 + ret[0]].tostring()
 
     def SetName(self, name):
         raise NotImplementedError()
 
     def GetBoardId(self):
-        if not self._board_id:
-            ret = self.ReadEEPROM(self.EEPROM_ID_ADDR, self.EEPROM_ID_SIZE)
-            # return ret[1:1+ret[0]].tostring()
-            self._board_id = ret[1:-1].tostring()
-            return self._board_id
-        else:
-            return self._board_id
+        ret = self.ReadEEPROM(self.EEPROM_ID_ADDR, self.EEPROM_ID_SIZE)
+        # return ret[1:1+ret[0]].tostring()
+        return ret[1:-1].tostring()
 
     def SetBoardId(self, board_id):
         raise NotImplementedError()
@@ -371,7 +361,7 @@ class SiUSBDevice(object):
 
             ret["Bitstream"] = bitstream_swap
             return ret
-        
+
     def InitXilinxConfPort(self):
         portreg = self._Read8051(self.PORTACFG_FX, 1)[0]
         portreg &= ~self.xp_rdwr
@@ -471,7 +461,7 @@ class SiUSBDevice(object):
         else:
             reg &= ~pin
         self.SetXilinxConfByte((reg,))
-    
+
     def GetXilinxConfPin(self, pin):
         reg = self.GetXilinxConfByte()
         return bool(reg & pin)
