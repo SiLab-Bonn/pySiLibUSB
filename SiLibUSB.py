@@ -42,28 +42,31 @@ HISTORY:
 - added more functionality to read out Xilinx configuration byte
 0.2.1:
 - reverting changes concerning reading EEPROM (fix is done in FPGA firmware)
-TODO:
-- add exception on misuse
+1.0.0:
+- use Lock instead of RLock to avoid misuse
+- use "with" statement to avoid deadlocks when exception is thrown
+- remove detach_kernel_driver
+- use range() instead of xrange() (Python 3 compatibility)
+- fix bug in _read() where last read has wrong address
 """
 
-__version__ = '0.2.1'
+__version__ = '1.0.0'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
-#import os
-#os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
-#os.environ['PYUSB_DEBUG'] = 'debug'
+# import os
+# os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
+# os.environ['PYUSB_DEBUG'] = 'debug'
 
 import usb.core
 import usb.util
 import array
-# import thread
-from threading import RLock
-# from multiprocessing import RLock
+from threading import Lock
 import struct
 import time
 import os
-import platform
+# import platform
+from itertools import chain, islice
 # import sys
 
 
@@ -141,13 +144,13 @@ class SiUSBDevice(object):
             else:
                 raise ValueError('Device has wrong type')
 
-        if platform.system() == 'Linux' and self.dev.is_kernel_driver_active(0) is True:
-            # detach kernel driver
-            self.dev.detach_kernel_driver(0)
+#         if platform.system() == 'Linux' and self.dev.is_kernel_driver_active(0) is True:
+#             # detach kernel driver
+#             self.dev.detach_kernel_driver(0)
 
         self.dev.set_configuration()
 
-        self.lock = RLock()
+        self.lock = Lock()
 
     def __repr__(self):
         return '%s' % filter(type(self.board_id).isdigit, self.board_id)
@@ -211,74 +214,59 @@ class SiUSBDevice(object):
     def ReadI2C(self, address, size):
         return self._read(self.SUR_TYPE_I2C, address, size)
 
+    @staticmethod
+    def chunk(iterable, n):
+        iterable = iter(iterable)
+        while True:
+            yield tuple(islice(iterable, n)) or iterable.next()
+
+    @staticmethod
+    def lazy_chunk(iterable, n):
+        iterable = iter(iterable)
+        while True:
+            yield chain([next(iterable)], islice(iterable, n - 1))
+
     def _write(self, stype, addr, data):
-        self.lock.acquire()
-
-        buff = array.array('B', data)
-        size = buff.buffer_info()[1]
-
-        if size > stype['ep_write']['maxTransferSize']:
-            chunks = lambda l, n: [l[x: x + n] for x in xrange(0, len(l), n)]
-            new_addr = addr
-            for req in chunks(buff.tolist(), stype['ep_write']['maxTransferSize']):
-                self._write_single(stype, addr, array.array('B', req))  # BUG: addr should be new_addr but it does not work
-                new_addr = new_addr + len(req)
-        else:
-            self._write_single(stype, addr, buff)
-
-        self.lock.release()
+        with self.lock:
+            max_size = stype['ep_write']['maxTransferSize']
+            val = 0
+            while val < len(data):
+                self._write_single(stype, addr, data[val:val + max_size])
+                val += max_size
+#                 addr += max_size  # FIXME: addr should also be increased, but does not work
 
     def _write_single(self, stype, addr, data):
-        size = data.buffer_info()[1]
-        if size > stype['ep_write']['maxPacketSize']:
-            self._write_sur(stype, self.SUR_DIR_OUT, addr, size)
-            i = 0
-            chunks = lambda l, n: [l[x: x + n] for x in xrange(0, len(l), n)]
-            for req in chunks(data, stype['ep_write']['maxPacketSize']):
-                self.dev.write(stype['ep_write']['address'], req.tostring())
-                i += 1
-        else:
-            self._write_sur(stype, self.SUR_DIR_OUT, addr, size)
-            self.dev.write(stype['ep_write']['address'], data.tostring())
+        self._write_sur(stype, self.SUR_DIR_OUT, addr, len(data))
+        max_size = stype['ep_write']['maxPacketSize']
+        ep = stype['ep_write']['address']
+        val = 0
+        while val < len(data):
+            self.dev.write(ep, data[val:val + max_size])
+            val += max_size
 
     def _read(self, stype, addr, size):
-        self.lock.acquire()
-
-        ret = array.array('B')
-        if size > stype['ep_read']['maxTransferSize']:
-            new_addr = addr
-            new_size = stype['ep_read']['maxTransferSize']
-            while new_size < size:
-                ret += self._read_single(stype, new_addr, stype['ep_read']['maxTransferSize'])
-                new_addr = addr + new_size
-                new_size = new_size + stype['ep_read']['maxTransferSize']
-
-            ret += self._read_single(stype, new_addr - stype['ep_read']['maxTransferSize'], size + stype['ep_read']['maxTransferSize'] - new_size)
-
-        else:
-            ret += self._read_single(stype, addr, size)
-
-        self.lock.release()
-
+        with self.lock:
+            max_size = stype['ep_read']['maxTransferSize']
+            ret = array.array('B')
+            val = addr
+            while val < addr + size - max_size:
+                ret += self._read_single(stype, val, max_size)
+                val += max_size
+            ret += self._read_single(stype, val, size - val + addr)
         return ret
 
     def _read_single(self, stype, addr, size):
-        if size == 0:
-            return array.array('B')
-        self._write_sur(stype, self.SUR_DIR_IN, addr, size)
-
         ret = array.array('B')
-
-        if size > stype['ep_read']['maxPacketSize']:
-            new_size = stype['ep_read']['maxPacketSize']
-            while new_size < size:
-                ret += self.dev.read(stype['ep_read']['address'], stype['ep_read']['maxPacketSize'])
-                new_size = new_size + stype['ep_read']['maxPacketSize']
-
-            ret += self.dev.read(stype['ep_read']['address'], size + stype['ep_read']['maxPacketSize'] - new_size)
-        else:
-            ret += self.dev.read(stype['ep_read']['address'], size)
-
+        if size == 0:
+            return ret
+        self._write_sur(stype, self.SUR_DIR_IN, addr, size)
+        max_size = stype['ep_read']['maxPacketSize']
+        ep = stype['ep_read']['address']
+        val = max_size
+        while val < size:
+            ret += self.dev.read(ep, max_size)
+            val += max_size
+        ret += self.dev.read(ep, size + max_size - val)
         return ret
 
     def _write_sur(self, stype, direction, addres, size):
