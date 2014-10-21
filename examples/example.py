@@ -1,4 +1,4 @@
-from pysilibusb.siusbdevice import SiUSBDevice, GetUSBBoards
+from SiLibUSB import SiUSBDevice, GetUSBBoards
 sidev = SiUSBDevice()
 
 #boards = GetUSBBoards()
