@@ -9,9 +9,9 @@
 #    authors names in all development based on this library.
 #--------------------------------------------------------------------------------------
 
-r"""SiLibUSB - SILAB USB Device Application Programming Interface
+r"""pySiLibUSB - SILAB USB Device Application Programming Interface
 
-Based on PyUsb [http://sourceforge.net/apps/trac/pyusb/]
+Based on PyUSB [http://walac.github.io/pyusb/]
 
 HISTORY:
 0.1:
@@ -48,9 +48,13 @@ HISTORY:
 - remove detach_kernel_driver
 - use range() instead of xrange() (Python 3 compatibility)
 - fix bug in _read() where last read has wrong address
+2.0.0:
+- use setuptools
+- renaming of modules
+TODO
 """
 
-__version__ = '1.0.0'
+__version__ = '2.0.0'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
