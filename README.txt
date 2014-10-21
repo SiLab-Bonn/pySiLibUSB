@@ -2,16 +2,19 @@
 Installing pySiLibUSB
 =====================================
 
+1. Dependencies:
 - libusb library: http://www.libusb.org/
-  Linux:   from distribution
-  Windows: http://libusb-win32.sourceforge.net/ or http://libusb.info
-           to keep original driver install filter driver
-  OSX:     use libusb from macports or homebrew
+  Linux:   apt-get install libusb-1.0-0
+  Windows: WinUSB driver (use http://zadig.akeo.ie installer)
+  OSX:     libusb from homebrew (http://brew.sh)
   
 - PyUSB: https://github.com/walac/pyusb
-  Installing from Python Package Index (PyPI):
-  pip install pyusb
+  Windows: pip install https://github.com/walac/pyusb/archive/master.zip
+  Linux/OSX: pip install git+https://github.com/walac/pyusb.git@master#egg=pyusb
 
-- Installing pySiLibUSB:
+2. pySiLibUSB:
+  For users (preferred):
   python setup.py install
-
+  
+  For developers:
+  python setup.py install
