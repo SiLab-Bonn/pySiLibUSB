@@ -1,9 +1,8 @@
 
-import SiLibUSB
+from pysilibusb.siusbdevice import SiUSBDevice, GetUSBBoards
+sidev = SiUSBDevice()
 
-sidev = SiLibUSB.SiUSBDevice()
-
-#boards = SiLibUSB.GetUSBBoards()
+#boards = GetUSBBoards()
 #for b in boards:
 #    print "BoardId: " +str(b.GetBoardId())
 #sidev = boards[0]

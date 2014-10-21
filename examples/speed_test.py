@@ -4,8 +4,8 @@ import cProfile
 
 s="""
 
-import SiLibUSB
-sidev = SiLibUSB.SiUSBDevice()
+from pysilibusb.siusbdevice import SiUSBDevice
+sidev = SiUSBDevice()
 
 def FastBlockRead(bytes):    
     sidev.FastBlockRead( bytes ) 
@@ -24,8 +24,8 @@ for i in range(1, 64):
     
 
 """
-import SiLibUSB
-sidev = SiLibUSB.SiUSBDevice()
+from pysilibusb.siusbdevice import SiUSBDevice
+sidev = SiUSBDevice()
 
 def prof():    
     for i in range(1, 128):
