@@ -1,4 +1,3 @@
-
 from pysilibusb.siusbdevice import SiUSBDevice, GetUSBBoards
 sidev = SiUSBDevice()
 
@@ -7,13 +6,10 @@ sidev = SiUSBDevice()
 #    print "BoardId: " +str(b.GetBoardId())
 #sidev = boards[0]
 
-print '   This is test!'
+print 'This is a test!'
 print "FWVersion: " + str(sidev.GetFWVersion())
 #print "Name: " + str(sidev.GetName())
 #print "BoardId: " +str(sidev.GetBoardId())
-
-
-#
 
 #sidev.WriteExternal(0x0000, [0x66])
 #sidev.WriteExternal(0x0001, [0x64])
