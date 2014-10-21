@@ -2,7 +2,7 @@
 
 from setuptools import setup, find_packages
 
-from pysilibusb.siusbdevice import __version__
+from SiLibUSB.siusbdevice import __version__
 
 author = 'Tomasz Hemperek'
 author_email = 'hemperek@uni-bonn.de'

@@ -49,9 +49,8 @@ HISTORY:
 - use range() instead of xrange() (Python 3 compatibility)
 - fix bug in _read() where last read has wrong address
 2.0.0:
-- use setuptools
-- renaming of modules
-TODO
+- using setuptools
+- renaming of modules (import not affected)
 """
 
 __version__ = '2.0.0'
