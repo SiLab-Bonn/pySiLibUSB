@@ -17,7 +17,7 @@ setup(
     install_requires=['pyusb>=1.0.0rc1'],
     packages=find_packages(),
     include_package_data=True,  # accept all data files and directories matched by MANIFEST.in or found in source control
-    package_data={'': ['*.txt', 'VERSION'], 'examples': ['*']},
+    package_data={'': ['*.txt', 'VERSION'], 'examples': ['*'], 'udev': ['*']},
     author=author,
     maintainer=author,
     author_email=author_email,

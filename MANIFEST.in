@@ -1,3 +1,4 @@
 include *.txt VERSION
 recursive-include examples *
+recursive-include udev *
 global-exclude *.pyc .project .pydevproject build

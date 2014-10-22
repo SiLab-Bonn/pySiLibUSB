@@ -1,1 +1,1 @@
-ACTION=="add", KERNEL=="*", BUS=="usb", SYSFS{idVendor}=="5312", MODE="0666"
+SUBSYSTEM=="usb", ATTR{idVendor}=="5312", ATTR{idProduct}=="0200", MODE="0666"
