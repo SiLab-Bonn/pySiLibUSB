@@ -57,9 +57,9 @@ __version__ = '2.0.0'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
-# import os
-# os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
-# os.environ['PYUSB_DEBUG'] = 'debug'
+#import os
+#os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
+#os.environ['PYUSB_DEBUG'] = 'debug'
 
 import usb.core
 import usb.util
@@ -421,9 +421,11 @@ class SiUSBDevice(object):
 
         self._write(self.SUR_TYPE_XILINX, 0, bitstream[0:])
 
+        time.sleep(0.5)
+
         self._write(self.SUR_TYPE_XILINX, 0, (0, 0, 0, 0, 0, 0, 0, 0))  # eight extra clock to enable start-up
 
-        time.sleep(0.1)
+        time.sleep(1.0)
 
         # /* cs_b = 1 */
         conf_reg |= self.xp_cs1  # // cs_b = 1
