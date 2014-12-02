@@ -53,9 +53,11 @@ HISTORY:
 - renaming of modules (import not affected)
 2.0.1:
 - increase delay during write of FPGA firmware (only some machines affected)
+2.0.2:
+- adding another funny delay for writing FPGA firmware
 """
 
-__version__ = '2.0.1'
+__version__ = '2.0.2'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -420,6 +422,8 @@ class SiUSBDevice(object):
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
+
+        time.sleep(0.001)
 
         self._write(self.SUR_TYPE_XILINX, 0, bitstream[0:])
 
