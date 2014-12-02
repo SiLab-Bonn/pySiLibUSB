@@ -51,9 +51,11 @@ HISTORY:
 2.0.0:
 - using setuptools
 - renaming of modules (import not affected)
+2.0.1:
+- increase delay during write of FPGA firmware (only some machines affected)
 """
 
-__version__ = '2.0.0'
+__version__ = '2.0.1'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
