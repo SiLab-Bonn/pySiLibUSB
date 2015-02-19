@@ -55,9 +55,11 @@ HISTORY:
 - increase delay during write of FPGA firmware (only some machines affected)
 2.0.2:
 - adding another funny delay for writing FPGA firmware
+2.0.3:
+- fix initialization of multiple devices
 """
 
-__version__ = '2.0.2'
+__version__ = '2.0.3'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -170,14 +172,19 @@ class SiUSBDevice(object):
 
         boards = []
         for dev in devs:
-            board = cls(device=dev)
             try:
-                curr_board_id = board.board_id
-                if filter(type(curr_board_id).isdigit, curr_board_id) == str(board_id):
-                    boards.append(board)
+                board = cls(device=dev)
             except usb.core.USBError:
                 pass
-            board.dispose()
+            else:
+                try:
+                    curr_board_id = board.board_id
+                except usb.core.USBError:
+                    pass
+                else:
+                    if filter(type(curr_board_id).isdigit, curr_board_id) == str(board_id):
+                        boards.append(board)
+                board.dispose()
         if not boards:
             raise ValueError('No device found with board ID %s' % str(board_id))
         elif len(boards) > 1:
@@ -398,36 +405,36 @@ class SiUSBDevice(object):
         self.InitXilinxConfPort()
 
         conf_reg = 0
-
+        time.sleep(0.5)
         # /* enable write */
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
-
+        time.sleep(0.5)
         # /* prog_b = 0 assert for at least 500ns */
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg &= ~self.xp_prog  # // prog_b = 0
         self.SetXilinxConfByte((conf_reg,))
-
+        time.sleep(0.5)
         # /* prog_b = 1 */
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
-
+        time.sleep(0.5)
         # /* cs_b = 0 */
         conf_reg &= ~self.xp_cs1  # // cs_b = 0
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
 
-        time.sleep(0.001)
+        time.sleep(1.5)
 
         self._write(self.SUR_TYPE_XILINX, 0, bitstream[0:])
 
-        time.sleep(0.5)
+        time.sleep(1.5)
 
         self._write(self.SUR_TYPE_XILINX, 0, (0, 0, 0, 0, 0, 0, 0, 0))  # eight extra clock to enable start-up
 
@@ -438,13 +445,13 @@ class SiUSBDevice(object):
         conf_reg &= ~self.xp_rdwr  # // write_b = 0
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
-
+        time.sleep(0.5)
         # // write_b = 1 (default condition)
         conf_reg |= self.xp_cs1  # // cs_b = 1
         conf_reg |= self.xp_rdwr  # // write_b = 1
         conf_reg |= self.xp_prog  # // prog_b = 1
         self.SetXilinxConfByte((conf_reg,))
-
+        time.sleep(0.5)
         return self.GetXilinxConfPin(self.xp_done)
 
     def SetXilinxConfByte(self, reg):
