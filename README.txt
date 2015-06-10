@@ -16,7 +16,7 @@ Installing pySiLibUSB
   python setup.py install
 
   For developers:
-  python setup.py install
+  python setup.py develop
 
   On Linux:
   Adding a udev rule is mandatory to gain access to the USB device. The udev rule needs to be placed in /etc/udev/rules.d/.

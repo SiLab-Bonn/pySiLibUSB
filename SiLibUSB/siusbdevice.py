@@ -57,9 +57,11 @@ HISTORY:
 - adding another funny delay for writing FPGA firmware
 2.0.3:
 - fix initialization of multiple devices
+2.0.4:
+- fix USB timeout on Windows platform
 """
 
-__version__ = '2.0.3'
+__version__ = '2.0.4'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -278,9 +280,9 @@ class SiUSBDevice(object):
         ep = stype['ep_read']['address']
         val = max_size
         while val < size:
-            ret += self.dev.read(ep, max_size)
+            ret += self.dev.read(ep, max_size, timeout=5000)
             val += max_size
-        ret += self.dev.read(ep, size + max_size - val)
+        ret += self.dev.read(ep, size + max_size - val, timeout=5000)
         return ret
 
     def _write_sur(self, stype, direction, addres, size):
