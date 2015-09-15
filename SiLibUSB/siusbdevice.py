@@ -64,6 +64,10 @@ HISTORY:
 - fix USB timeout on Windows platform
 2.0.5:
 - increase timeout, added timeout for write
+2.0.6:
+- decrease timeout from 10s to 1s
+  to fix timeouts during programming FPGA
+  when several USB devices are connected
 """
 
 import usb.core
@@ -77,7 +81,7 @@ import os
 from itertools import chain, islice
 # import sys
 
-__version__ = '2.0.5'
+__version__ = '2.0.6'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -262,7 +266,7 @@ class SiUSBDevice(object):
         ep = stype['ep_write']['address']
         val = 0
         while val < len(data):
-            self.dev.write(ep, data[val:val + max_size], timeout=10000)
+            self.dev.write(ep, data[val:val + max_size], timeout=1000)
             val += max_size
 
     def _read(self, stype, addr, size):
@@ -285,9 +289,9 @@ class SiUSBDevice(object):
         ep = stype['ep_read']['address']
         val = max_size
         while val < size:
-            ret += self.dev.read(ep, max_size, timeout=10000)
+            ret += self.dev.read(ep, max_size, timeout=1000)
             val += max_size
-        ret += self.dev.read(ep, size + max_size - val, timeout=10000)
+        ret += self.dev.read(ep, size + max_size - val, timeout=1000)
         return ret
 
     def _write_sur(self, stype, direction, addres, size):
@@ -296,7 +300,7 @@ class SiUSBDevice(object):
         a_addr = array.array('B', struct.pack('I', addres))
         a_addr.byteswap()
         ar = array.array('B', [stype['id'], direction]) + a_addr + a_size
-        self.dev.write(self.SUR_CONTROL_PIPE, ar, timeout=10000)
+        self.dev.write(self.SUR_CONTROL_PIPE, ar, timeout=1000)
 
     def GetFWVersion(self):
         ret = self._read(self.SUR_TYPE_FWVER, 0, 2)
@@ -399,7 +403,6 @@ class SiUSBDevice(object):
         To create *.bin file from *.bit file use impact or: "promgen -u 0 filename.bit -p bin -w"
         The possible return values are True or False.
         """
-
         bitstream = array.array('B')
 
         extension = os.path.splitext(filename)[1]
