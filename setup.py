@@ -1,4 +1,7 @@
-#!/usr/bin/env python   
+#!/usr/bin/env python
+
+# building source distribution:
+# python setup.py sdist
 
 from setuptools import setup, find_packages
 

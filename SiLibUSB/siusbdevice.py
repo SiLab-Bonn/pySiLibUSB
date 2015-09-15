@@ -1,13 +1,16 @@
-#-------------------------------------------------------------------------
+#
 #    Title   : pySiLibUSB based on C++ SiLibUsb by HK
 #    Company : SILAB, Phys. Inst Bonn
 #    Authors : Tomasz Hemperek <hemperek@uni-bonn.de>, Jens Janssen <janssen@physik.uni-bonn.de>
-#--------------------------------------------------------------------------------------
+#
+# ----------------------------------------------------------------------------------------------
+#
 #    License : You are free to use this source files for your own development as long
 #    as it stays in a public research context. You are not allowed to use it
 #    for commercial purpose. You must put this header with
 #    authors names in all development based on this library.
-#--------------------------------------------------------------------------------------
+#
+# ----------------------------------------------------------------------------------------------
 
 r"""pySiLibUSB - SILAB USB Device Application Programming Interface
 
@@ -59,15 +62,9 @@ HISTORY:
 - fix initialization of multiple devices
 2.0.4:
 - fix USB timeout on Windows platform
+2.0.5:
+- increase timeout, added timeout for write
 """
-
-__version__ = '2.0.4'
-__version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
-
-# set debugging options for pyUSB
-# import os
-# os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
-# os.environ['PYUSB_DEBUG'] = 'debug'
 
 import usb.core
 import usb.util
@@ -79,6 +76,14 @@ import os
 # import platform
 from itertools import chain, islice
 # import sys
+
+__version__ = '2.0.5'
+__version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
+
+# set debugging options for pyUSB
+# import os
+# os.environ['PYUSB_DEBUG_LEVEL'] = 'debug'
+# os.environ['PYUSB_DEBUG'] = 'debug'
 
 
 class SiUSBDevice(object):
@@ -257,7 +262,7 @@ class SiUSBDevice(object):
         ep = stype['ep_write']['address']
         val = 0
         while val < len(data):
-            self.dev.write(ep, data[val:val + max_size])
+            self.dev.write(ep, data[val:val + max_size], timeout=10000)
             val += max_size
 
     def _read(self, stype, addr, size):
@@ -280,9 +285,9 @@ class SiUSBDevice(object):
         ep = stype['ep_read']['address']
         val = max_size
         while val < size:
-            ret += self.dev.read(ep, max_size, timeout=5000)
+            ret += self.dev.read(ep, max_size, timeout=10000)
             val += max_size
-        ret += self.dev.read(ep, size + max_size - val, timeout=5000)
+        ret += self.dev.read(ep, size + max_size - val, timeout=10000)
         return ret
 
     def _write_sur(self, stype, direction, addres, size):
@@ -291,7 +296,7 @@ class SiUSBDevice(object):
         a_addr = array.array('B', struct.pack('I', addres))
         a_addr.byteswap()
         ar = array.array('B', [stype['id'], direction]) + a_addr + a_size
-        self.dev.write(self.SUR_CONTROL_PIPE, ar)
+        self.dev.write(self.SUR_CONTROL_PIPE, ar, timeout=10000)
 
     def GetFWVersion(self):
         ret = self._read(self.SUR_TYPE_FWVER, 0, 2)
@@ -359,9 +364,12 @@ class SiUSBDevice(object):
 
             bs = array.array('B', bitstream)
             bitstream_swap = ''
-            lsbits = lambda b: (b * 0x0202020202 & 0x010884422010) % 1023
+
+            def reverse(byte):
+                return (b * 0x0202020202 & 0x010884422010) % 1023
+
             for b in bs:
-                bitstream_swap += chr(lsbits(b))
+                bitstream_swap += chr(reverse(b))
 
             ret["Bitstream"] = bitstream_swap
             return ret
