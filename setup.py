@@ -7,8 +7,8 @@ from setuptools import setup, find_packages
 
 from SiLibUSB.siusbdevice import __version__
 
-author = 'Tomasz Hemperek'
-author_email = 'hemperek@uni-bonn.de'
+author = 'Tomasz Hemperek, Jens Janssen'
+author_email = 'hemperek@uni-bonn.de, janssen@physik.uni-bonn.de'
 
 setup(
     name='pySiLibUSB',
