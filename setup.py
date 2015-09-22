@@ -13,7 +13,7 @@ author_email = 'hemperek@uni-bonn.de, janssen@physik.uni-bonn.de'
 setup(
     name='pySiLibUSB',
     version=__version__,
-    description='pySiLibUSB - SILAB USB device pplication programming interface',
+    description='pySiLibUSB - SILAB USB device application programming interface',
     url='https://silab-redmine.physik.uni-bonn.de/projects/pysilibusb',
     license='BSD 3-Clause ("BSD New" or "BSD Simplified") License',
     long_description='API for SILAB USB devices.',
