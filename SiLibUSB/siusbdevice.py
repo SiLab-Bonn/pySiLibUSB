@@ -68,6 +68,8 @@ HISTORY:
 - decrease timeout from 10s to 1s
   to fix timeouts during programming FPGA
   when several USB devices are connected
+2.0.7:
+- bump version for pypi, no changes
 """
 
 import usb.core
@@ -81,7 +83,7 @@ import os
 from itertools import chain, islice
 # import sys
 
-__version__ = '2.0.6'
+__version__ = '2.0.7'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
