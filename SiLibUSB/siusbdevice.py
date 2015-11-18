@@ -296,10 +296,10 @@ class SiUSBDevice(object):
         ret += self.dev.read(ep, size + max_size - val, timeout=1000)
         return ret
 
-    def _write_sur(self, stype, direction, addres, size):
+    def _write_sur(self, stype, direction, address, size):
         a_size = array.array('B', struct.pack('I', size))
         a_size.byteswap()
-        a_addr = array.array('B', struct.pack('I', addres))
+        a_addr = array.array('B', struct.pack('I', address))
         a_addr.byteswap()
         ar = array.array('B', [stype['id'], direction]) + a_addr + a_size
         self.dev.write(self.SUR_CONTROL_PIPE, ar, timeout=1000)
