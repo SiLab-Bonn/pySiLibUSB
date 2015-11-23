@@ -1,23 +1,26 @@
-Installing pySiLibUSB
-=====================
+# pySiLibUSB
 
-1. Dependencies:
-- libusb library: http://www.libusb.org/
-  Linux:   apt-get install libusb-1.0-0
-  Windows: WinUSB driver (use http://zadig.akeo.ie installer)
-  OSX:     libusb from homebrew (http://brew.sh)
+pySiLibUSB - SILAB USB device application programming interface
 
-- PyUSB: https://github.com/walac/pyusb
-  Windows: pip install https://github.com/walac/pyusb/archive/master.zip
-  Linux/OSX: pip install git+https://github.com/walac/pyusb.git@master#egg=pyusb
+## Installation
 
-2. pySiLibUSB:
-  For users (preferred):
-  python setup.py install
+A working libusb installation is required. Read the [Wiki](https://github.com/SiLab-Bonn/pySiLibUSB/wiki) on how to install libusb library.
 
-  For developers:
-  python setup.py develop
+The following packages are required for pySiLibUSB to function:
+  ```
+  pyusb
+  ```
 
-  On Linux:
-  Adding a udev rule is mandatory to gain access to the USB device. The udev rule needs to be placed in /etc/udev/rules.d/.
-  Examples are given in the /udev/ folder.
+Run the **following commands** to install the packages:
+  ```
+  pip install https://github.com/walac/pyusb/archive/master.zip (Windows without git)
+  pip install git+https://github.com/walac/pyusb.git@master#egg=pyusb (Linux, Mac, Windows with git)
+  ```
+and then
+  ```
+  pip install pySiLibUSB
+  ```
+
+*Linux:*
+Adding a udev rule is mandatory to gain access to the USB device. The udev rule needs to be placed in /etc/udev/rules.d/.
+Examples are given in the /udev/ folder.
