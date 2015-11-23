@@ -21,6 +21,6 @@ and then
   pip install pySiLibUSB
   ```
 
-_Linux:_
+__Linux:__
 Adding a udev rule is mandatory to gain access to the USB device. The udev rule needs to be placed in /etc/udev/rules.d/.
 Examples are given in the /udev/ folder.
