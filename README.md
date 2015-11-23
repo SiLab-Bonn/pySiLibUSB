@@ -16,11 +16,11 @@ Run the **following commands** to install the packages:
   pip install https://github.com/walac/pyusb/archive/master.zip (Windows without git)
   pip install git+https://github.com/walac/pyusb.git@master#egg=pyusb (Linux, Mac, Windows with git)
   ```
-and then
+and then:
   ```
   pip install pySiLibUSB
   ```
 
 __Linux:__
 Adding a udev rule is mandatory to gain access to the USB device. The udev rule needs to be placed in /etc/udev/rules.d/.
-Examples are given in the /udev/ folder.
+Examples are given in the "/udev":https://github.com/SiLab-Bonn/pySiLibUSB/blob/master/pybar/udev/ folder.
