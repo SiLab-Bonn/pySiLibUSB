@@ -23,4 +23,4 @@ and then:
 
 __Linux:__
 Adding a udev rule is mandatory to gain access to the USB device. The udev rule needs to be placed in /etc/udev/rules.d/.
-Examples are given in the "/udev":https://github.com/SiLab-Bonn/pySiLibUSB/blob/master/pybar/udev/ folder.
+Examples are available in the "udev":https://github.com/SiLab-Bonn/pySiLibUSB/tree/master/udev folder.
