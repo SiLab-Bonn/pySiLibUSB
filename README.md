@@ -11,15 +11,15 @@ The following packages are required for pySiLibUSB to function:
   pyusb
   ```
 
-To install from PyPI:
+To install [pyUSB](https://github.com/walac/pyusb), run the following command:
+  ```
+  pip install https://github.com/walac/pyusb/archive/1.0.0rc1.zip (Windows, without git)
+  pip install git+https://github.com/walac/pyusb.git@1.0.0rc1 (Linux, Mac and Windows, with git)
+  ```
+
+Run the following command to install the latest version of pySiLibUSB:
   ```
   pip install pySiLibUSB
-  ```
-  
-To install from repository:
-  ```
-  pip install https://github.com/walac/pyusb/archive/master.zip (Windows without git)
-  pip install git+https://github.com/walac/pyusb.git@master#egg=pyusb (Linux, Mac, Windows with git)
   ```
 
 __Linux:__
