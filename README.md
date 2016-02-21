@@ -6,15 +6,14 @@ pySiLibUSB - SILAB USB device application programming interface
 
 A working libusb installation is required. Read the [Wiki](https://github.com/SiLab-Bonn/pySiLibUSB/wiki) on how to install libusb library.
 
-The following packages are required for pySiLibUSB to function:
+The following Python packages are required for pySiLibUSB to function:
   ```
   pyusb
   ```
 
 To install [pyUSB](https://github.com/walac/pyusb), run the following command:
   ```
-  pip install https://github.com/walac/pyusb/archive/1.0.0rc1.zip (Windows, without git)
-  pip install git+https://github.com/walac/pyusb.git@1.0.0rc1 (Linux, Mac and Windows, with git)
+  pip install pyusb
   ```
 
 Run the following command to install the latest version of pySiLibUSB:
