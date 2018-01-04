@@ -70,6 +70,8 @@ HISTORY:
   when several USB devices are connected
 2.0.7:
 - bump version for pypi, no changes
+2.0.8:
+- fixing imports in __init__.py
 """
 
 import usb.core
@@ -83,7 +85,7 @@ import os
 from itertools import chain, islice
 # import sys
 
-__version__ = '2.0.7'
+__version__ = '2.0.8'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
