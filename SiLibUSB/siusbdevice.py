@@ -72,6 +72,8 @@ HISTORY:
 - bump version for pypi, no changes
 2.0.8:
 - fixing imports in __init__.py
+3.0.0:
+- Python 3 support
 """
 
 import usb.core
@@ -85,7 +87,7 @@ import os
 from itertools import chain, islice
 # import sys
 
-__version__ = '2.0.8'
+__version__ = '3.0.0'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -308,19 +310,27 @@ class SiUSBDevice(object):
 
     def GetFWVersion(self):
         ret = self._read(self.SUR_TYPE_FWVER, 0, 2)
-        return ret.tostring()
+        try:
+            return ret.tobytes().decode("utf-8", "ignore")
+        except AttributeError:
+            return ret.tostring()
 
     def GetName(self):
         ret = self.ReadEEPROM(self.EEPROM_NAME_ADDR, self.EEPROM_NAME_SIZE)
-        return ret[1:1 + ret[0]].tostring()
+        try:
+            return ret[1:1 + ret[0]].tobytes().decode("utf-8", "ignore")
+        except AttributeError:
+            return ret[1:1 + ret[0]].tostring()
 
     def SetName(self, name):
         raise NotImplementedError()
 
     def GetBoardId(self):
         ret = self.ReadEEPROM(self.EEPROM_ID_ADDR, self.EEPROM_ID_SIZE)
-        # return ret[1:1+ret[0]].tostring()
-        return ret[1:-1].tostring()
+        try:
+            return ret[1:-1].tobytes().decode("utf-8", "ignore")
+        except AttributeError:
+            return ret[1:-1].tostring()
 
     def SetBoardId(self, board_id):
         raise NotImplementedError()
@@ -345,7 +355,6 @@ class SiUSBDevice(object):
         return letter, f.read(alen)
 
     def _read_bit_file(self, bit_file_name):
-        # print bit_file_name
         with open(bit_file_name, "rb") as f:
             head13 = array.array('B', f.read(13))
             if head13.tolist() != [0, 9, 15, 240, 15, 240, 15, 240, 15, 240, 0, 0, 1]:
@@ -533,6 +542,6 @@ def GetUSBDevices():
 if __name__ == "__main__":
     boards = GetUSBBoards()
     for board in boards:
-        print "Name:", board.GetName()
-        print "BoardId:", board.GetBoardId()
-        print "FWVersion:", board.GetFWVersion()
+        print("Name: %s" % board.GetName())
+        print("BoardId: %s" % board.GetBoardId())
+        print("FWVersion: %s" % board.GetFWVersion())
