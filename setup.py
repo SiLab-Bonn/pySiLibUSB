@@ -25,5 +25,6 @@ setup(
     maintainer=author,
     author_email=author_email,
     maintainer_email=author_email,
+    python_requires='>=2.7',
     platforms='any'
 )
