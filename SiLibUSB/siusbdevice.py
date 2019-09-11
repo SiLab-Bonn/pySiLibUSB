@@ -74,6 +74,11 @@ HISTORY:
 - fixing imports in __init__.py
 3.0.0:
 - Python 3 support
+3.0.1:
+- improving Python 3 compatibility when disposing device:
+  dereferencing by assigning None and waiting for the GC to do its work
+- fixing PyUSB returning iterator (instead of None) in Pythion 3 when no device is found and find_all=True
+- fixing classmethod from_board_id() in Python 3
 """
 
 import usb.core
@@ -184,7 +189,9 @@ class SiUSBDevice(object):
     @classmethod
     def from_board_id(cls, board_id):
         devs = usb.core.find(find_all=True, idVendor=cls.vendor_id, idProduct=cls.product_id)
-        if devs is None:
+        if devs is not None:  # iterator in Python 3
+            devs = list(devs)
+        if devs is None or not devs or None in devs:
             raise ValueError('No device found')
 
         boards = []
@@ -199,9 +206,10 @@ class SiUSBDevice(object):
                 except usb.core.USBError:
                     pass
                 else:
-                    if filter(type(curr_board_id).isdigit, curr_board_id) == str(board_id):
+                    if "".join(filter(str.isdigit, curr_board_id)) == str(board_id):
                         boards.append(board)
-                board.dispose()
+                    else:
+                        board.dispose()
         if not boards:
             raise ValueError('No device found with board ID %s' % str(board_id))
         elif len(boards) > 1:
@@ -517,6 +525,7 @@ class SiUSBDevice(object):
         will allocate them automatically.
         '''
         usb.util.dispose_resources(self.dev)
+        self.dev = None
 
     def __del__(self):
         if os.name == 'posix':
@@ -526,7 +535,9 @@ class SiUSBDevice(object):
 
 def GetUSBBoards():
     devs = usb.core.find(find_all=True, idVendor=0x5312, idProduct=0x0200)
-    if devs is None:
+    if devs is not None:  # iterator in Python 3
+        devs = list(devs)
+    if devs is None or not devs or None in devs:
         return None
     boards = [SiUSBDevice(device=dev) for dev in devs]
     return boards
@@ -534,7 +545,9 @@ def GetUSBBoards():
 
 def GetUSBDevices():
     devs = usb.core.find(find_all=True, idVendor=0x5312, idProduct=0x0200)
-    if devs is None:
+    if devs is not None:  # iterator in Python 3
+        devs = list(devs)
+    if devs is None or not devs or None in devs:
         return None
     return devs
 
@@ -545,3 +558,4 @@ if __name__ == "__main__":
         print("Name: %s" % board.GetName())
         print("BoardId: %s" % board.GetBoardId())
         print("FWVersion: %s" % board.GetFWVersion())
+        board.dispose()
