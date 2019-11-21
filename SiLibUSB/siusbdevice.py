@@ -79,6 +79,8 @@ HISTORY:
   dereferencing by assigning None and waiting for the GC to do its work
 - fixing PyUSB returning iterator (instead of None) in Pythion 3 when no device is found and find_all=True
 - fixing classmethod from_board_id() in Python 3
+3.0.2:
+- fixing loading firmware in Python 3
 """
 
 import usb.core
@@ -92,7 +94,7 @@ import os
 from itertools import chain, islice
 # import sys
 
-__version__ = '3.0.1'
+__version__ = '3.0.2'
 __version_info__ = (tuple([int(num) for num in __version__.split('.')]), 'final', 0)
 
 # set debugging options for pyUSB
@@ -375,28 +377,28 @@ class SiUSBDevice(object):
             ret["File Creation Data"] = self._read_bit_file_section(f)[1]
             ret["File Creation Time"] = self._read_bit_file_section(f)[1]
 
-            if f.read(1) != 'e':
+            if bytes(f.read(1)) != b'e':
                 raise ValueError('Wrong Bitstream Section')
 
-            c = array.array('B', f.read(4))
+            c = array.array('B', bytearray(f.read(4)))
             c.byteswap()
             # bitstream_len = struct.unpack("I", c)
 
             # bitstream = f.read(bitstream_len[0])
             bitstream_len = c[0] * (2 ** 24) + c[1] * (2 ** 16) + c[2] * (2 ** 8) + c[3]
 
-            bitstream = f.read(bitstream_len)
+            bitstream = bytearray(f.read(bitstream_len))
 
             bs = array.array('B', bitstream)
-            bitstream_swap = ''
 
             def reverse(byte):
                 return (b * 0x0202020202 & 0x010884422010) % 1023
 
-            for b in bs:
-                bitstream_swap += chr(reverse(b))
+            # reverse bytes
+            for i, b in enumerate(bs):
+                bitstream[i] = reverse(b)
 
-            ret["Bitstream"] = bitstream_swap
+            ret["Bitstream"] = bitstream
             return ret
 
     def InitXilinxConfPort(self):
